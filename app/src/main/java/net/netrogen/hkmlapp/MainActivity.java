@@ -1,12 +1,16 @@
 package net.netrogen.hkmlapp;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.BottomNavigationView;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -14,6 +18,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.MenuItem;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
@@ -23,8 +28,14 @@ import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.kbeanie.multipicker.api.ImagePicker;
+import com.kbeanie.multipicker.api.Picker;
+import com.kbeanie.multipicker.api.callbacks.ImagePickerCallback;
+import com.kbeanie.multipicker.api.entity.ChosenImage;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -32,10 +43,15 @@ import java.io.StringBufferInputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
 
+
+
 public class MainActivity extends AppCompatActivity {
+
+    private final static int EXTERNAL_STORAGE_PERMISSION_REQUEST = 100;
 
     private WebView webview;
     private ConstraintLayout container;
@@ -44,7 +60,9 @@ public class MainActivity extends AppCompatActivity {
     final private String jqCDN_url = "http://code.jquery.com/jquery-1.12.4.min.js";
     private BottomNavigationView navigation;
     private ProgressBar progressBar;
-
+    private ValueCallback<Uri> mUploadMessage;
+    private ValueCallback<Uri[]> mUploadMessageArray;
+    private ImagePicker imagePicker;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -80,6 +98,53 @@ public class MainActivity extends AppCompatActivity {
     };
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(resultCode == RESULT_OK) {
+            if(requestCode == Picker.PICK_IMAGE_DEVICE) {
+                if(imagePicker == null) {
+                    imagePicker = new ImagePicker(MainActivity.this);
+                    imagePicker.setImagePickerCallback(newImagePickerCallback());
+                }
+                imagePicker.submit(data);
+            }
+        }
+    }
+
+    private ImagePickerCallback newImagePickerCallback() {
+        return new ImagePickerCallback(){
+            @Override
+            public void onImagesChosen(List<ChosenImage> images) {
+                // Display images
+                if (null == mUploadMessage && mUploadMessageArray == null) return;
+                Uri result = Uri.parse(images.get(0).getQueryUri());
+                if (mUploadMessage != null) {
+                    mUploadMessage.onReceiveValue(result);
+                    mUploadMessage = null;
+                } else if (mUploadMessageArray != null) {
+                    Uri[] uris = new Uri[1];
+                    uris[0] = result;
+                    mUploadMessageArray.onReceiveValue(uris);
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                // Do error handling
+                Log.v("@hkmlApp", message);
+            }
+        };
+    }
+
+    private void pickFile(String type) {
+        imagePicker = new ImagePicker(MainActivity.this);
+        imagePicker.setImagePickerCallback(newImagePickerCallback());
+        // imagePicker.allowMultiple(); // Default is false
+        // imagePicker.shouldGenerateMetadata(false); // Default is true
+        imagePicker.shouldGenerateThumbnails(false); // Default is true
+        imagePicker.pickImage();
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         setTheme(R.style.AppTheme);
 
@@ -104,8 +169,28 @@ public class MainActivity extends AppCompatActivity {
             }
         );
 
+        requestExternalStoragePermission();
+
         new WebTask().execute(this);
 
+    }
+
+    private void requestExternalStoragePermission() {
+        if ((ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED)) {
+
+            Log.v("@hkmlapp", "getting permissions");
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    EXTERNAL_STORAGE_PERMISSION_REQUEST);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
     private class WebTask extends AsyncTask<MainActivity, Integer, Boolean> {
@@ -185,6 +270,32 @@ public class MainActivity extends AppCompatActivity {
                 public void onProgressChanged(WebView view, int newProgress) {
                     //Log.v("HKMLApp", "@progress: " + Integer.toString(newProgress) + "\n");
                     progressBar.setProgress(newProgress);
+                }
+
+                @SuppressWarnings("unused")
+                public void openFileChooser(ValueCallback<Uri> uploadMsg, String AcceptType, String capture) {
+                    mUploadMessage = uploadMsg;
+                    pickFile(AcceptType);
+                }
+
+                @SuppressWarnings("unused")
+
+                public void openFileChooser(ValueCallback<Uri> uploadMsg, String AcceptType) {
+                    mUploadMessage = uploadMsg;
+                    pickFile(AcceptType);
+                }
+
+                public void openFileChooser(ValueCallback<Uri> uploadMsg) {
+                    mUploadMessage = uploadMsg;
+                    pickFile("image/*");
+
+                }
+
+                @Override
+                public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> uploadMsg, FileChooserParams fileChooserParams) {
+                    mUploadMessageArray = uploadMsg;
+                    pickFile("image/*");
+                    return true;
                 }
             });
             webview.loadUrl(mainUrl);
