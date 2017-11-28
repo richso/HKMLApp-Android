@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    android:versionCode="1.1"
-    android:versionName="release 1.1"
+    android:versionCode="3"
+    android:versionName="release 1.2"
     package="net.netrogen.hkmlapp">
 
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -15,6 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
+            android:hardwareAccelerated="true"
             android:name=".MainActivity"
             android:label="@string/app_name"
             android:theme="@style/SplashTheme">

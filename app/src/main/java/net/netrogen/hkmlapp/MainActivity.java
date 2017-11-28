@@ -3,6 +3,7 @@ package net.netrogen.hkmlapp;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -17,6 +18,8 @@ import android.support.v7.widget.Toolbar;
 import android.util.Base64;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.SurfaceView;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
@@ -25,8 +28,10 @@ import android.webkit.WebView;
 import android.webkit.WebSettings;
 import android.webkit.WebChromeClient;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.VideoView;
 
 import com.kbeanie.multipicker.api.ImagePicker;
 import com.kbeanie.multipicker.api.Picker;
@@ -56,8 +61,11 @@ public class MainActivity extends AppCompatActivity {
     private WebView webview;
     private ConstraintLayout container;
     final private String mainUrl = "http://www.hkml.net/Discuz/index.php";
-    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp.js";
     final private String jqCDN_url = "http://code.jquery.com/jquery-1.12.4.min.js";
+    final private String touchSwipeUrl = "https://raw.githubusercontent.com/mattbryson/TouchSwipe-Jquery-Plugin/master/jquery.touchSwipe.min.js";
+
+    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp.js";
+
     private BottomNavigationView navigation;
     private ProgressBar progressBar;
     private ValueCallback<Uri> mUploadMessage;
@@ -140,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
         imagePicker.setImagePickerCallback(newImagePickerCallback());
         // imagePicker.allowMultiple(); // Default is false
         // imagePicker.shouldGenerateMetadata(false); // Default is true
-        imagePicker.shouldGenerateThumbnails(false); // Default is true
+        // imagePicker.shouldGenerateThumbnails(false); // Default is true
         imagePicker.pickImage();
     }
 
@@ -197,19 +205,22 @@ public class MainActivity extends AppCompatActivity {
 
         private String js_begin = "";
         private String jqCDN = "";
+        private String jsTouchSwipeUrl = "";
         private MainActivity ma;
 
         protected Boolean doInBackground(MainActivity... mas) {
             ma = mas[0];
-            Random r = new Random();
 
             jqCDN = getFromHttp(MainActivity.this.jqCDN_url);
-            js_begin = getFromHttp(MainActivity.this.js_begin_url + "?" + Double.toString(r.nextDouble()));
+            jsTouchSwipeUrl = getFromHttp(MainActivity.this.touchSwipeUrl);
+            js_begin = getFromHttp(MainActivity.this.js_begin_url);
 
             return true;
         }
 
-        protected void onPostExecute(Boolean result) {
+        protected void initWebview(String url) {
+            final String urlstr = url;
+
             webview = (WebView) findViewById(R.id.webview);
             WebSettings webSettings = webview.getSettings();
             webSettings.setJavaScriptEnabled(true);
@@ -220,6 +231,7 @@ public class MainActivity extends AppCompatActivity {
                     // note: prevent "back" load history page will not invoke title event
                     // js - added code to prevent double invoke of jQuery operations
                     injectScript(view, jqCDN + "\n $j = jQuery.noConflict(); ");
+                    injectScript(view, jsTouchSwipeUrl);
                     injectScript(view, js_begin);
                     // --
 
@@ -255,7 +267,6 @@ public class MainActivity extends AppCompatActivity {
 
             });
 
-
             webview.setWebChromeClient(new WebChromeClient() {
 
                 @Override
@@ -263,6 +274,7 @@ public class MainActivity extends AppCompatActivity {
                     ma.setTitle(title);
 
                     injectScript(view, jqCDN + "\n $j = jQuery.noConflict(); ");
+                    injectScript(view, jsTouchSwipeUrl);
                     injectScript(view, js_begin);
                 }
 
@@ -270,6 +282,15 @@ public class MainActivity extends AppCompatActivity {
                 public void onProgressChanged(WebView view, int newProgress) {
                     //Log.v("HKMLApp", "@progress: " + Integer.toString(newProgress) + "\n");
                     progressBar.setProgress(newProgress);
+
+                    if (newProgress >= 50) {
+                        // let the "back" pages change to App layout faster
+                        injectScript(view, jqCDN + "\n $j = jQuery.noConflict(); ");
+                        injectScript(view, jsTouchSwipeUrl);
+                        injectScript(view, js_begin);
+                        navigation.getMenu().findItem(R.id.action_back).setEnabled(webview.canGoBack());
+                        navigation.getMenu().findItem(R.id.action_forward).setEnabled(webview.canGoForward());
+                    }
                 }
 
                 @SuppressWarnings("unused")
@@ -297,8 +318,30 @@ public class MainActivity extends AppCompatActivity {
                     pickFile("image/*");
                     return true;
                 }
+
+                @Override
+                public void onShowCustomView(View view, CustomViewCallback callback) {
+                    super.onShowCustomView(view, callback);
+                    if (view instanceof FrameLayout){
+                        FrameLayout frame = (FrameLayout) view;
+
+                        View video = frame.getFocusedChild();
+                        frame.removeView(video);
+                        MainActivity.this.setContentView(video);
+
+                    }
+                }
+                public void onHideCustomView() {
+                    MainActivity.this.setContentView(R.layout.activity_main);
+                    WebTask.this.initWebview(webview.getUrl());
+                }
             });
-            webview.loadUrl(mainUrl);
+
+            webview.loadUrl(url);
+        }
+
+        protected void onPostExecute(Boolean result) {
+            initWebview(mainUrl);
         }
 
         private void injectScript(WebView view, String script) {

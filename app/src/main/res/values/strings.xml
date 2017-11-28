@@ -1,6 +1,7 @@
 <resources>
-    <string name="app_name">HKMLApp</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+    <string name="app_name">香港模型聯盟</string>
+    <string name="title_home">面頁</string>
+    <string name="title_back">返回</string>
+    <string name="title_forward">向前</string>
+    <string name="title_share">分享</string>
 </resources>

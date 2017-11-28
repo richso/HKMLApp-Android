@@ -3,12 +3,12 @@
     <item
         android:id="@+id/action_back"
         android:icon="@drawable/ic_action_back"
-        android:title="Back"
+        android:title="@string/title_back"
         />
     <item
         android:id="@+id/action_forward"
         android:icon="@drawable/ic_action_forward"
-        android:title="Forward"
+        android:title="@string/title_forward"
         />
     <item
         android:id="@+id/uncheckedItem"
@@ -16,11 +16,11 @@
     <item
         android:id="@+id/action_share"
         android:icon="@drawable/ic_action_share"
-        android:title="Share"
+        android:title="@string/title_share"
         />
     <item
         android:id="@+id/action_home"
         android:icon="@drawable/ic_action_home"
-        android:title="Home"
+        android:title="@string/title_home"
         />
 </menu>
