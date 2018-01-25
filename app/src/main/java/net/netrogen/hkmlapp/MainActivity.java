@@ -1,6 +1,7 @@
 package net.netrogen.hkmlapp;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
@@ -33,10 +34,15 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.VideoView;
 
+import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.drawee.generic.GenericDraweeHierarchyBuilder;
+import com.facebook.imagepipeline.core.ImagePipelineConfig;
+import com.facebook.imagepipeline.decoder.SimpleProgressiveJpegConfig;
 import com.kbeanie.multipicker.api.ImagePicker;
 import com.kbeanie.multipicker.api.Picker;
 import com.kbeanie.multipicker.api.callbacks.ImagePickerCallback;
 import com.kbeanie.multipicker.api.entity.ChosenImage;
+import com.stfalcon.frescoimageviewer.ImageViewer;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -45,13 +51,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringBufferInputStream;
+import java.net.CookieHandler;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.HttpCookie;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
 
 
 public class MainActivity extends AppCompatActivity {
@@ -60,11 +74,12 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webview;
     private ConstraintLayout container;
+    final private String base_path = "http://www.hkml.net/Discuz/";
     final private String mainUrl = "http://www.hkml.net/Discuz/index.php";
     final private String jqCDN_url = "http://code.jquery.com/jquery-1.12.4.min.js";
     final private String touchSwipeUrl = "https://raw.githubusercontent.com/mattbryson/TouchSwipe-Jquery-Plugin/master/jquery.touchSwipe.min.js";
 
-    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp.js";
+    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp_ios.js";
 
     private BottomNavigationView navigation;
     private ProgressBar progressBar;
@@ -157,6 +172,10 @@ public class MainActivity extends AppCompatActivity {
         setTheme(R.style.AppTheme);
 
         super.onCreate(savedInstanceState);
+
+        java.net.CookieManager cookieManager = new java.net.CookieManager();
+        CookieHandler.setDefault(cookieManager);
+
         setContentView(R.layout.activity_main);
 
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
@@ -179,8 +198,59 @@ public class MainActivity extends AppCompatActivity {
 
         requestExternalStoragePermission();
 
+        ImagePipelineConfig config = ImagePipelineConfig.newBuilder(this)
+                .setProgressiveJpegConfig(new SimpleProgressiveJpegConfig())
+                .setResizeAndRotateEnabledForNetwork(true)
+                .setDownsampleEnabled(true)
+                .build();
+
+        Fresco.initialize(this, config);
+
         new WebTask().execute(this);
 
+    }
+
+
+    private void syncCookies() {
+        // sync cookies between webview and HttpURLConnection
+
+        String cookiesStr = android.webkit.CookieManager.getInstance().getCookie(this.base_path);
+        List<HttpCookie> cookies = parseCookies(cookiesStr);
+
+        Log.v("@cookievalstr", cookiesStr);
+
+        // Get cookie manager for HttpURLConnection
+        java.net.CookieStore cookieStore = ((java.net.CookieManager)
+                CookieHandler.getDefault()).getCookieStore();
+
+        try {
+            for (HttpCookie ck : cookies) {
+                Log.v("@cookieval", ck.getName());
+                cookieStore.add(new URI(this.base_path), ck);
+            }
+        } catch (Exception e) {
+            Log.v("@cookie", e.getMessage());
+        }
+    }
+
+    private ArrayList<HttpCookie> parseCookies(String str) {
+        ArrayList<HttpCookie> cookies = new ArrayList<HttpCookie>();
+
+        String[] strs = str.split(";");
+        for(String ckstr: strs) {
+            String[] ckNV = ckstr.split("=");
+            try {
+                HttpCookie ck = new HttpCookie(ckNV[0].trim(), java.net.URLDecoder.decode(ckNV[1], "UTF-8"));
+                ck.setDomain("www.hkml.net");
+                ck.setPath("/Discuz/");
+                ck.setVersion(0);
+                cookies.add(ck);
+            } catch (Exception e) {
+                Log.e("@cookie-encode", e.getMessage());
+            }
+        }
+
+        return cookies;
     }
 
     private void requestExternalStoragePermission() {
@@ -192,6 +262,9 @@ public class MainActivity extends AppCompatActivity {
 
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    EXTERNAL_STORAGE_PERMISSION_REQUEST);
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                     EXTERNAL_STORAGE_PERMISSION_REQUEST);
         }
     }
@@ -223,10 +296,13 @@ public class MainActivity extends AppCompatActivity {
 
             webview = (WebView) findViewById(R.id.webview);
             WebSettings webSettings = webview.getSettings();
+            CustomJavascriptInterface myJavaScriptInterface = new CustomJavascriptInterface(MainActivity.this);
+            webview.addJavascriptInterface(myJavaScriptInterface, "AndroidFunction");
             webSettings.setJavaScriptEnabled(true);
             webview.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageFinished(WebView view, String url) {
+                    //syncCookies();
 
                     // note: prevent "back" load history page will not invoke title event
                     // js - added code to prevent double invoke of jQuery operations
@@ -300,7 +376,6 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 @SuppressWarnings("unused")
-
                 public void openFileChooser(ValueCallback<Uri> uploadMsg, String AcceptType) {
                     mUploadMessage = uploadMsg;
                     pickFile(AcceptType);
@@ -435,6 +510,44 @@ public class MainActivity extends AppCompatActivity {
             return response.toString();
         }
 
+    }
+
+    public class CustomJavascriptInterface {
+        Context mContext;
+        CustomJavascriptInterface(Context c) {
+            mContext = c;
+        }
+
+        @JavascriptInterface
+        public void onImageClick(final int idx, final String[] urls) {
+            for(int i=0; i<urls.length; i++) {
+                if (!(urls[i].indexOf("http://") == 0 || urls[i].indexOf("https://") == 0)) {
+                    urls[i] = base_path + urls[i];
+                }
+            }
+
+            Log.v("@js", Integer.toString(idx));
+            Log.v("@js", Arrays.toString(urls));
+
+            if (urls.length > 0 && idx >= 0) {
+
+                MainActivity.this.runOnUiThread(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        syncCookies();
+
+                        GenericDraweeHierarchyBuilder hierarchyBuilder = GenericDraweeHierarchyBuilder.newInstance(getResources())
+                                .setFailureImage(R.drawable.ic_broken_image_124dp)
+                                .setPlaceholderImage(R.drawable.ic_preimage_124dp);
+
+                        new ImageViewer.Builder(mContext, urls)
+                                .setCustomDraweeHierarchyBuilder(hierarchyBuilder)
+                                .setStartPosition(idx).show();
+                    }
+                });
+            }
+        }
     }
 
 }
