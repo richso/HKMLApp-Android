@@ -91,6 +91,8 @@ public class MainActivity extends AppCompatActivity {
     private ValueCallback<Uri[]> mUploadMessageArray;
     private ImagePicker imagePicker;
 
+    private Bundle savedState;
+
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -176,6 +178,8 @@ public class MainActivity extends AppCompatActivity {
         setTheme(R.style.AppTheme);
 
         super.onCreate(savedInstanceState);
+
+        savedState = savedInstanceState;
 
         java.net.CookieManager cookieManager = new java.net.CookieManager();
         CookieHandler.setDefault(cookieManager);
@@ -288,6 +292,20 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState ) {
+        webview = (WebView) findViewById(R.id.webview);
+        super.onSaveInstanceState(outState);
+        webview.saveState(outState);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        webview = (WebView) findViewById(R.id.webview);
+        super.onRestoreInstanceState(savedInstanceState);
+        webview.restoreState(savedInstanceState);
+    }
+
     private class WebTask extends AsyncTask<MainActivity, Integer, Boolean> {
 
         private String js_begin = "";
@@ -386,6 +404,8 @@ public class MainActivity extends AppCompatActivity {
 
             webview.setWebChromeClient(new WebChromeClient() {
 
+                private Bundle wvstate = new Bundle();
+
                 @Override
                 public void onReceivedTitle(WebView view, String title) {
                     ma.setTitle(title);
@@ -439,6 +459,8 @@ public class MainActivity extends AppCompatActivity {
                 public void onShowCustomView(View view, CustomViewCallback callback) {
                     super.onShowCustomView(view, callback);
                     if (view instanceof FrameLayout){
+                        webview.saveState(wvstate);
+
                         FrameLayout frame = (FrameLayout) view;
 
                         View video = frame.getFocusedChild();
@@ -449,11 +471,15 @@ public class MainActivity extends AppCompatActivity {
                 }
                 public void onHideCustomView() {
                     MainActivity.this.setContentView(R.layout.activity_main);
-                    WebTask.this.initWebview(webview.getUrl());
+                    initWebview(webview.getUrl());
                 }
             });
 
-            webview.loadUrl(url);
+            if (MainActivity.this.savedState == null) {
+                webview.loadUrl(url);
+            } else {
+                webview.restoreState(MainActivity.this.savedState);
+            }
         }
 
         protected void onPostExecute(Boolean result) {
