@@ -79,10 +79,10 @@ public class MainActivity extends AppCompatActivity {
     private ConstraintLayout container;
     final private String base_path = "http://www.hkml.net/Discuz/";
     final private String mainUrl = "http://www.hkml.net/Discuz/index.php";
-    final private String jqCDN_url = "http://code.jquery.com/jquery-1.12.4.min.js";
-    final private String touchSwipeUrl = "https://raw.githubusercontent.com/mattbryson/TouchSwipe-Jquery-Plugin/master/jquery.touchSwipe.min.js";
+    //final private String jqCDN_url = "http://code.jquery.com/jquery-1.12.4.min.js";
+    //final private String touchSwipeUrl = "https://raw.githubusercontent.com/mattbryson/TouchSwipe-Jquery-Plugin/master/jquery.touchSwipe.min.js";
 
-    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp_ios.js";
+    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp.js";
 
     private String startUrl = mainUrl;
     private BottomNavigationView navigation;
