@@ -1,1 +1,1 @@
-include ':app', ':multipicker', ':frescoimageviewer'
+include ':app', ':multipicker'

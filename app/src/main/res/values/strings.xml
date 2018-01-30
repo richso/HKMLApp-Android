@@ -5,4 +5,5 @@
     <string name="title_forward">向前</string>
     <string name="title_share">分享</string>
     <string name="title_activity_ligbox">Lightbox</string>
+    <string name="filter_view_http_hkml">HKML</string>
 </resources>

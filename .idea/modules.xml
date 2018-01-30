@@ -4,7 +4,6 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/HKMLApp.iml" filepath="$PROJECT_DIR$/HKMLApp.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/frescoimageviewer/frescoimageviewer.iml" filepath="$PROJECT_DIR$/frescoimageviewer/frescoimageviewer.iml" />
       <module fileurl="file://$PROJECT_DIR$/multipicker/multipicker.iml" filepath="$PROJECT_DIR$/multipicker/multipicker.iml" />
     </modules>
   </component>

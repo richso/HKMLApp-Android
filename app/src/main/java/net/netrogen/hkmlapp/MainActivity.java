@@ -8,6 +8,7 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Parcel;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.BottomNavigationView;
@@ -38,6 +39,7 @@ import com.facebook.drawee.backends.pipeline.Fresco;
 import com.facebook.drawee.generic.GenericDraweeHierarchyBuilder;
 import com.facebook.imagepipeline.core.ImagePipelineConfig;
 import com.facebook.imagepipeline.decoder.SimpleProgressiveJpegConfig;
+import com.facebook.imagepipeline.request.ImageRequestBuilder;
 import com.kbeanie.multipicker.api.ImagePicker;
 import com.kbeanie.multipicker.api.Picker;
 import com.kbeanie.multipicker.api.callbacks.ImagePickerCallback;
@@ -81,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
 
     final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp_ios.js";
 
+    private String startUrl = mainUrl;
     private BottomNavigationView navigation;
     private ProgressBar progressBar;
     private ValueCallback<Uri> mUploadMessage;
@@ -205,6 +208,16 @@ public class MainActivity extends AppCompatActivity {
                 .build();
 
         Fresco.initialize(this, config);
+
+        // see if any deep link need to be processed
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        Uri data = intent.getData();
+        if (data != null) {
+            Log.v("@intent", data.toString());
+            startUrl = data.toString();
+        }
+        // -
 
         new WebTask().execute(this);
 
@@ -416,7 +429,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(Boolean result) {
-            initWebview(mainUrl);
+            initWebview(startUrl);
         }
 
         private void injectScript(WebView view, String script) {
