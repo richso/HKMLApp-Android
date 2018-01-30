@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -295,11 +296,38 @@ public class MainActivity extends AppCompatActivity {
         private MainActivity ma;
 
         protected Boolean doInBackground(MainActivity... mas) {
+            Context context = MainActivity.this;
+            AssetManager am = context.getAssets();
+
             ma = mas[0];
 
-            jqCDN = getFromHttp(MainActivity.this.jqCDN_url);
-            jsTouchSwipeUrl = getFromHttp(MainActivity.this.touchSwipeUrl);
+            //jqCDN = getFromHttp(MainActivity.this.jqCDN_url);
+            //jsTouchSwipeUrl = getFromHttp(MainActivity.this.touchSwipeUrl);
+
             js_begin = getFromHttp(MainActivity.this.js_begin_url);
+
+            try {
+                InputStream is = am.open("jquery-1.12.4.min.js");
+                jqCDN = readStream(is);
+            } catch (IOException e) {
+                Log.e("@background", e.getMessage(), e);
+            }
+
+            try {
+                InputStream is = am.open("jquery.touchSwipe.min.js");
+                jsTouchSwipeUrl = readStream(is);
+            } catch (IOException e) {
+                Log.e("@background", e.getMessage(), e);
+            }
+
+            if (js_begin.equals("")) {
+                try {
+                    InputStream is = am.open("hkmlApp.js");
+                    js_begin = readStream(is);
+                } catch (IOException e) {
+                    Log.e("@backgropund", e.getMessage(), e);
+                }
+            }
 
             return true;
         }
