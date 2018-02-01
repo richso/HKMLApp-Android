@@ -84,7 +84,9 @@ public class MainActivity extends AppCompatActivity {
     //final private String jqCDN_url = "http://code.jquery.com/jquery-1.12.4.min.js";
     //final private String touchSwipeUrl = "https://raw.githubusercontent.com/mattbryson/TouchSwipe-Jquery-Plugin/master/jquery.touchSwipe.min.js";
 
-    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp_test.js";
+    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp.js";
+
+    final private String fbsharekey = "facebookshare:";
 
     private String startUrl = mainUrl;
     // private BottomNavigationView navigation;
@@ -185,6 +187,7 @@ public class MainActivity extends AppCompatActivity {
         if (data != null) {
             Log.v("@intent", data.toString());
             startUrl = data.toString();
+            Log.v("@startUrl", startUrl);
         }
         // -
 
@@ -336,12 +339,14 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                    if (url.startsWith("facebookshare:")) {
+                    if (url.startsWith(fbsharekey)) {
                         // open fb share dialog
+
+                        Log.v("@share", url);
 
                         Intent share = new Intent(Intent.ACTION_SEND);
                         share.setType("text/plain");
-                        share.putExtra(Intent.EXTRA_TEXT, url);
+                        share.putExtra(Intent.EXTRA_TEXT, url.substring(fbsharekey.length()));
 
                         startActivity(Intent.createChooser(share, "分享"));
 
