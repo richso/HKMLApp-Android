@@ -1,3 +1,8 @@
+//////////////////////////
+//
+//  to be removed as changed to use hkml panel in versionCode 7
+//
+
 package net.netrogen.hkmlapp;
 
 import android.support.design.internal.BottomNavigationItemView;

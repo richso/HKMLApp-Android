@@ -3,6 +3,7 @@ package net.netrogen.hkmlapp;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.media.MediaPlayer;
@@ -12,7 +13,7 @@ import android.os.Bundle;
 import android.os.Parcel;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
-import android.support.design.widget.BottomNavigationView;
+// import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -23,6 +24,7 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
@@ -82,49 +84,16 @@ public class MainActivity extends AppCompatActivity {
     //final private String jqCDN_url = "http://code.jquery.com/jquery-1.12.4.min.js";
     //final private String touchSwipeUrl = "https://raw.githubusercontent.com/mattbryson/TouchSwipe-Jquery-Plugin/master/jquery.touchSwipe.min.js";
 
-    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp.js";
+    final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp_test.js";
 
     private String startUrl = mainUrl;
-    private BottomNavigationView navigation;
+    // private BottomNavigationView navigation;
     private ProgressBar progressBar;
     private ValueCallback<Uri> mUploadMessage;
     private ValueCallback<Uri[]> mUploadMessageArray;
     private ImagePicker imagePicker;
 
     private Bundle savedState;
-
-    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
-            = new BottomNavigationView.OnNavigationItemSelectedListener() {
-
-        @Override
-        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-            switch (item.getItemId()) {
-                case R.id.action_home:
-                    webview.loadUrl(mainUrl);
-                    navigation.setSelected(false);
-                    return true;
-                case R.id.action_back:
-                    webview.goBack();
-                    navigation.setSelected(false);
-                    return true;
-                case R.id.action_forward:
-                    webview.goForward();
-                    navigation.setSelected(false);
-                    return true;
-                case R.id.action_share:
-                    String url = webview.getUrl();
-                    Intent share = new Intent(Intent.ACTION_SEND);
-                    share.setType("text/plain");
-                    share.putExtra(Intent.EXTRA_TEXT, url);
-
-                    startActivity(Intent.createChooser(share, "分享"));
-
-                    navigation.setSelected(false);
-                    return true;
-            }
-            return false;
-        }
-    };
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -187,11 +156,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
-
-        navigation = (BottomNavigationView) findViewById(R.id.navigation);
-        BottomNavigationViewHelper.disableShiftMode(navigation);
-        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
-        navigation.setSelected(false);
 
         final SwipeRefreshLayout mySwipeRefreshLayout = (SwipeRefreshLayout) this.findViewById(R.id.swipeContainer);
         mySwipeRefreshLayout.setOnRefreshListener(
@@ -319,9 +283,6 @@ public class MainActivity extends AppCompatActivity {
 
             ma = mas[0];
 
-            //jqCDN = getFromHttp(MainActivity.this.jqCDN_url);
-            //jsTouchSwipeUrl = getFromHttp(MainActivity.this.touchSwipeUrl);
-
             js_begin = getFromHttp(MainActivity.this.js_begin_url);
 
             try {
@@ -351,7 +312,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void initWebview(String url) {
-            final String urlstr = url;
 
             webview = (WebView) findViewById(R.id.webview);
             WebSettings webSettings = webview.getSettings();
@@ -369,9 +329,6 @@ public class MainActivity extends AppCompatActivity {
                     injectScript(view, jsTouchSwipeUrl);
                     injectScript(view, js_begin);
                     // --
-
-                    navigation.getMenu().findItem(R.id.action_back).setEnabled(webview.canGoBack());
-                    navigation.getMenu().findItem(R.id.action_forward).setEnabled(webview.canGoForward());
 
                     // cater for if .goBack() is called and the setTitle event is not fired
                     ma.setTitle(view.getTitle());
@@ -404,7 +361,7 @@ public class MainActivity extends AppCompatActivity {
 
             webview.setWebChromeClient(new WebChromeClient() {
 
-                private Bundle wvstate = new Bundle();
+                FrameLayout videoFrame;
 
                 @Override
                 public void onReceivedTitle(WebView view, String title) {
@@ -425,8 +382,6 @@ public class MainActivity extends AppCompatActivity {
                         injectScript(view, jqCDN + "\n $j = jQuery.noConflict(); ");
                         injectScript(view, jsTouchSwipeUrl);
                         injectScript(view, js_begin);
-                        navigation.getMenu().findItem(R.id.action_back).setEnabled(webview.canGoBack());
-                        navigation.getMenu().findItem(R.id.action_forward).setEnabled(webview.canGoForward());
                     }
                 }
 
@@ -459,19 +414,31 @@ public class MainActivity extends AppCompatActivity {
                 public void onShowCustomView(View view, CustomViewCallback callback) {
                     super.onShowCustomView(view, callback);
                     if (view instanceof FrameLayout){
-                        webview.saveState(wvstate);
 
                         FrameLayout frame = (FrameLayout) view;
 
+                        videoFrame = frame;
+
                         View video = frame.getFocusedChild();
                         frame.removeView(video);
-                        MainActivity.this.setContentView(video);
-
+                        video.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);
+                        MainActivity.this.getSupportActionBar().hide();
+                        //MainActivity.this.setContentView(video);
+                        View wvc = findViewById(R.id.webviewContainer);
+                        wvc.setVisibility(View.INVISIBLE);
+                        ConstraintLayout vdc = (ConstraintLayout) findViewById(R.id.videoContainer);
+                        vdc.addView(video, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                        vdc.setVisibility(View.VISIBLE);
                     }
                 }
                 public void onHideCustomView() {
-                    MainActivity.this.setContentView(R.layout.activity_main);
-                    initWebview(webview.getUrl());
+                    MainActivity.this.getSupportActionBar().show();
+                    //MainActivity.this.setContentView(R.layout.activity_main);
+                    //initWebview(webview.getUrl());
+                    View vdc = findViewById(R.id.videoContainer);
+                    vdc.setVisibility(View.INVISIBLE);
+                    View wvc = findViewById(R.id.webviewContainer);
+                    wvc.setVisibility(View.VISIBLE);
                 }
             });
 
@@ -506,20 +473,6 @@ public class MainActivity extends AppCompatActivity {
                     "parent.appendChild(script)" +
                     "})()");
 
-        }
-
-        private String encodeScript(String script_text) {
-            Pattern pDQ = Pattern.compile("\"");
-            Pattern pCR = Pattern.compile("\r");
-            Pattern pLF = Pattern.compile("\n");
-
-            script_text = pDQ.matcher(script_text).replaceAll("\\\\\"");
-            script_text = pCR.matcher(script_text).replaceAll("\\\\r");
-            script_text = pLF.matcher(script_text).replaceAll("\\\\n");
-
-            //Log.v("HKMLApp", "@script: " + script_text);
-
-            return script_text;
         }
 
         private String getFromHttp(String urlstr) {
@@ -583,6 +536,18 @@ public class MainActivity extends AppCompatActivity {
         Context mContext;
         CustomJavascriptInterface(Context c) {
             mContext = c;
+        }
+
+        @JavascriptInterface
+        public int getVersionCode() {
+            int vcode = 0;
+            try {
+                PackageInfo pInfo = MainActivity.this.getPackageManager().getPackageInfo(getPackageName(), 0);
+                vcode = pInfo.versionCode;
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            }
+            return vcode;
         }
 
         @JavascriptInterface
