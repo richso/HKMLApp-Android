@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -428,22 +429,21 @@ public class MainActivity extends AppCompatActivity {
                         frame.removeView(video);
                         video.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);
                         MainActivity.this.getSupportActionBar().hide();
-                        //MainActivity.this.setContentView(video);
                         View wvc = findViewById(R.id.webviewContainer);
                         wvc.setVisibility(View.INVISIBLE);
                         ConstraintLayout vdc = (ConstraintLayout) findViewById(R.id.videoContainer);
                         vdc.addView(video, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                         vdc.setVisibility(View.VISIBLE);
+                        getWindow().getDecorView().setBackgroundColor(Color.BLACK);
                     }
                 }
                 public void onHideCustomView() {
                     MainActivity.this.getSupportActionBar().show();
-                    //MainActivity.this.setContentView(R.layout.activity_main);
-                    //initWebview(webview.getUrl());
                     View vdc = findViewById(R.id.videoContainer);
                     vdc.setVisibility(View.INVISIBLE);
                     View wvc = findViewById(R.id.webviewContainer);
                     wvc.setVisibility(View.VISIBLE);
+                    getWindow().getDecorView().setBackgroundColor(Color.TRANSPARENT);
                 }
             });
 
