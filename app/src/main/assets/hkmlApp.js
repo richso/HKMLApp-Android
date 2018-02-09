@@ -214,6 +214,15 @@ $j(document).ready(function() {
                 return validate(this);
             }
 
+            $('#smiliestable').insertAfter($('#postform [name="message"]').parent());
+            $('#smiliestable [id^="smilie_"]').removeAttr('onmouseover');
+            $('#smiliestable [id^="smilie_"]').removeAttr('onclick').on('click', function(){
+                var s = $('[name="message"]').prop("selectionStart");
+                var v = $('[name="message"]').val();
+                var newVal = v.substring(0, s) + $(this).attr('alt') + ' ' + v.substring(s, v.length);
+                $('[name="message"]').val(newVal).prop("selectionStart", s + $(this).attr('alt').length+1);
+                $('[name="message"]').focus().prop("selectionEnd", $('[name="message"]').prop("selectionStart"));
+            });
         }
         
         /* apply to content page only */
@@ -354,7 +363,7 @@ $j(document).ready(function() {
             
             // replace youtube link with in place youtube box
             var w = $(window).width();
-            var vw = w * 0.9;
+            var vw = Math.max(w - 10, 200);
             var vh = vw * 315 / 560;
             var q = $('a[href*=".youtube.com"], a[href*="youtu.be"]');
             q.each(function(i, n){
@@ -514,17 +523,24 @@ $j(document).ready(function() {
         }
         
         try {
-            var d = $('<div style="position: fixed; bottom:0; width: calc(100% - 40px); height: 60px; background-color: #dddddd; padding: 0 20px;"></div>')
-                .append('<a href="javascript:void(0);" onclick="window.history.back()" style="float: left; padding: 5px; font-size: 24px;">&#8617;</a>')
-                .append('<a href="javascript:void(0);" onclick="window.history.forward()" style="float: left; padding: 5px; font-size: 24px;">&#8618;</a>')
+            var pmCheck = $('#pmprompt');
+            
+            var d = $('<div style="position: fixed; bottom:0; width: calc(100% - 40px); height: 60px; background-color: #eeeeee; padding: 0 20px;"></div>')
+                .append('<a href="javascript:void(0);" onclick="window.history.back()" style="float: left; padding: 5px; font-size: 24px;">&#9664;</a>')
+                .append('<a href="javascript:void(0);" onclick="window.history.forward()" style="float: left; padding: 5px; font-size: 24px;">&#9654;</a>')
                 .append('<a href="javascript:void(0);" onclick="location=\'./index.php\';" style="float: right; padding: 5px; font-size: 24px;">&#127968;</a>')
-                .append('<a href="facebookshare:'+location.href+'" style="float: right; padding: 5px; font-size: 24px;">&#9734;</a>')
-                .append('<div style="clear: both;"></div>');
+                .append('<a href="facebookshare:'+location.href+'" style="float: right; padding: 5px; font-size: 24px;">&#9734;</a>');
+            
+            if (pmCheck.length) {
+                d.append('<a href="pm.php" style="float: right; padding: 5px; font-size: 24px; color: red;">&#9993;</a>');
+            }
+        
+            d.append('<div style="clear: both;"></div>');
 
             if (userAgent.match(/iPhone/i)) {
                 $('<div style="height: 60px;"></div>').appendTo('body');
                 if (!usrname) {
-                    d = $('<div style="position: fixed; bottom:0; width: calc(100% - 40px); height: 60px; background-color: #dddddd; padding: 0 20px; text-align: center;"></div>')
+                    d = $('<div style="position: fixed; bottom:0; width: calc(100% - 40px); height: 60px; background-color: #eeeeee; padding: 0 20px; text-align: center;"></div>')
                             .append('<a href="logging.php?action=login" style="padding-top: 5px;">µn¤J</a>')
                             .append('<div style="clear: both;"></div>');
                 }
@@ -532,9 +548,23 @@ $j(document).ready(function() {
             }
             
             if (typeof AndroidFunction != 'undefined' && typeof AndroidFunction.getVersionCode != 'undefined') {
-                // start from versionCode = 7
+                // start from versionCode = 8
                 $('<div style="height: 60px;"></div>').appendTo('body');
                 d.appendTo('body');
+            }
+        } catch (e) {}
+        
+        // cater for Android cannot auto-refresh
+        try {
+            var refresh_content = $('meta[http-equiv="refresh"]').attr('content');
+            if (refresh_content) {
+                var data = refresh_content.split(/[ ;]url\=/);
+                var url = data[1];
+                if (url) {
+                    setTimeout(data[0], function(){
+                        location = url;
+                    });
+                }
             }
         } catch (e) {}
 
@@ -575,14 +605,14 @@ $j(document).ready(function() {
                     return validate(this);
                 }
                 
-                $('#smiliestable').insertAfter($('#postform #message').parent());
+                $('#smiliestable').insertAfter($('#postform [name="message"]').parent());
                 $('#smiliestable [id^="smilie_"]').removeAttr('onmouseover');
                 $('#smiliestable [id^="smilie_"]').removeAttr('onclick').on('click', function(){
-                    var s = $('#message').prop("selectionStart");
-                    var v = $('#message').val();
+                    var s = $('[name="message"]').prop("selectionStart");
+                    var v = $('[name="message"]').val();
                     var newVal = v.substring(0, s) + $(this).attr('alt') + ' ' + v.substring(s, v.length);
-                    $('#message').val(newVal).prop("selectionStart", s + $(this).attr('alt').length+1);
-                    $('#message').focus().prop("selectionEnd", $('#message').prop("selectionStart"));
+                    $('[name="message"]').val(newVal).prop("selectionStart", s + $(this).attr('alt').length+1);
+                    $('[name="message"]').focus().prop("selectionEnd", $('[name="message"]').prop("selectionStart"));
                 });
             } catch(e) {
                 //

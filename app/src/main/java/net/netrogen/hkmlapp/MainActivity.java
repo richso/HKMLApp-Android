@@ -22,6 +22,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.view.View;
@@ -36,6 +38,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
+import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.VideoView;
 
@@ -78,7 +81,6 @@ public class MainActivity extends AppCompatActivity {
 
     private final static int EXTERNAL_STORAGE_PERMISSION_REQUEST = 100;
 
-    private WebView webview;
     private ConstraintLayout container;
     final private String base_path = "http://www.hkml.net/Discuz/";
     final private String mainUrl = "http://www.hkml.net/Discuz/index.php";
@@ -87,16 +89,28 @@ public class MainActivity extends AppCompatActivity {
 
     final private String js_begin_url = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp.js";
 
+    final private String fb_hkml_group = "https://www.facebook.com/groups/86899893467/";
+    final private String js_fb = "https://raw.githubusercontent.com/richso/hkmlApp/master/public_html/hkmlApp_fb.js";
+
     final private String fbsharekey = "facebookshare:";
 
     private String startUrl = mainUrl;
-    // private BottomNavigationView navigation;
+
+    private WebView webview;
     private ProgressBar progressBar;
+    private WebView fbWebview;
+    private ProgressBar fbProgressBar;
+
     private ValueCallback<Uri> mUploadMessage;
     private ValueCallback<Uri[]> mUploadMessageArray;
     private ImagePicker imagePicker;
 
     private Bundle savedState;
+
+    private TabHost tabhost;
+
+    private boolean fbTabLoaded = false;
+    private String fbStartUrl = fb_hkml_group;
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -158,6 +172,19 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
+        tabhost = (TabHost) findViewById(R.id.tabhost);
+        tabhost.setup();
+
+        TabHost.TabSpec websiteTab = tabhost.newTabSpec("forum");
+        websiteTab.setIndicator(createNewTabText("論壇"));
+        websiteTab.setContent(R.id.forum);
+        tabhost.addTab(websiteTab);
+
+        TabHost.TabSpec fbTab = tabhost.newTabSpec("facebook");
+        fbTab.setIndicator(createNewTabText("facebook"));
+        fbTab.setContent(R.id.facebook);
+        tabhost.addTab(fbTab);
+
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
         final SwipeRefreshLayout mySwipeRefreshLayout = (SwipeRefreshLayout) this.findViewById(R.id.swipeContainer);
@@ -194,8 +221,31 @@ public class MainActivity extends AppCompatActivity {
 
         new WebTask().execute(this);
 
+        fbWebview = (WebView) findViewById(R.id.fbWebview);
+        fbProgressBar = (ProgressBar) findViewById(R.id.fbProgressBar);
+
+        tabhost.setOnTabChangedListener(new TabHost.OnTabChangeListener() {
+
+            @Override
+            public void onTabChanged(String tabId) {
+
+                int i = tabhost.getCurrentTab();
+
+                if (i == 1 && !fbTabLoaded) { // facebook tab
+                    new FBWebTask().execute(MainActivity.this);
+                }
+
+            }
+        });
+
     }
 
+    private View createNewTabText(String txt) {
+        View view = LayoutInflater.from(this).inflate(R.layout.tab_layout, null);
+        TextView tv = (TextView) view.findViewById(R.id.tabTextView);
+        tv.setText(txt);
+        return view;
+    }
 
     private void syncCookies() {
         // sync cookies between webview and HttpURLConnection
@@ -353,9 +403,24 @@ public class MainActivity extends AppCompatActivity {
 
                         return true;
                     } else if (! url.startsWith("http://www.hkml.net/")) {
-                        // open with OS default browser
-                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        startActivity(browserIntent);
+
+                        if (url.startsWith("https://www.facebook.com/") ||
+                                url.startsWith("https://m.facebook.com/") ||
+                                url.startsWith("https://facebook.com/")) {
+
+                            Log.v("@fb url", url);
+
+                            if (fbTabLoaded) {
+                                fbWebview.loadUrl(url);
+                            } else {
+                                fbStartUrl = url;
+                            }
+                            tabhost.setCurrentTab(1);
+                        } else {
+                            // open with OS default browser
+                            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                            startActivity(browserIntent);
+                        }
 
                         return true;
                     }
@@ -429,6 +494,7 @@ public class MainActivity extends AppCompatActivity {
                         frame.removeView(video);
                         video.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);
                         MainActivity.this.getSupportActionBar().hide();
+                        tabhost.setVisibility(View.INVISIBLE);
                         View wvc = findViewById(R.id.webviewContainer);
                         wvc.setVisibility(View.INVISIBLE);
                         ConstraintLayout vdc = (ConstraintLayout) findViewById(R.id.videoContainer);
@@ -443,6 +509,7 @@ public class MainActivity extends AppCompatActivity {
                     vdc.setVisibility(View.INVISIBLE);
                     View wvc = findViewById(R.id.webviewContainer);
                     wvc.setVisibility(View.VISIBLE);
+                    tabhost.setVisibility(View.VISIBLE);
                     getWindow().getDecorView().setBackgroundColor(Color.TRANSPARENT);
                 }
             });
@@ -456,6 +523,229 @@ public class MainActivity extends AppCompatActivity {
 
         protected void onPostExecute(Boolean result) {
             initWebview(startUrl);
+        }
+
+        private void injectScript(WebView view, String script) {
+            //Log.v("HTMLApp", "@script: " + script);
+
+            // String-ify the script byte-array using BASE64 encoding !!!
+            String encoded = "";
+            try {
+                encoded = Base64.encodeToString(script.getBytes("Big5"), Base64.NO_WRAP);
+            } catch (java.io.UnsupportedEncodingException e) {
+                // do nothing
+                Log.v("HKMLApp","@script_error: " + e.getMessage());
+            }
+            view.loadUrl("javascript:(function() {" +
+                    "var parent = document.getElementsByTagName('head').item(0);" +
+                    "var script = document.createElement('script');" +
+                    "script.type = 'text/javascript';" +
+                    // Tell the browser to BASE64-decode the string into your script !!!
+                    "script.innerHTML = window.atob('" + encoded + "');" +
+                    "parent.appendChild(script)" +
+                    "})()");
+
+        }
+
+        private String getFromHttp(String urlstr) {
+            String content = "";
+            URL url;
+            HttpURLConnection urlConnection = null;
+            try {
+                url = new URL(urlstr);
+
+                //Log.v("HKMLApp", "@url: " + urlstr);
+
+                urlConnection = (HttpURLConnection) url
+                        .openConnection();
+
+                int responseCode = urlConnection.getResponseCode();
+
+                //Log.v("HKMLApp", "@responsecode: " + Integer.toString(responseCode));
+
+                if(responseCode == HttpURLConnection.HTTP_OK){
+                    content = readStream(urlConnection.getInputStream());
+                    //Log.v("HKMLApp", "@content: " + content);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e("HKMLApp", "@error: " + e.getMessage() + "\n", e);
+            } finally {
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+            }
+
+            return content;
+        }
+
+        private String readStream(InputStream in) {
+            BufferedReader reader = null;
+            StringBuffer response = new StringBuffer();
+            try {
+                reader = new BufferedReader(new InputStreamReader(in, "big5"));
+                String line = "";
+                while ((line = reader.readLine()) != null) {
+                    response.append(line + "\n");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            return response.toString();
+        }
+
+    }
+
+    private class FBWebTask extends AsyncTask<MainActivity, Integer, Boolean> {
+
+        private String js_begin = "";
+        private String jqCDN = "";
+        private String jsTouchSwipeUrl = "";
+        private MainActivity ma;
+
+        protected Boolean doInBackground(MainActivity... mas) {
+            Context context = MainActivity.this;
+            AssetManager am = context.getAssets();
+
+            ma = mas[0];
+
+            js_begin = getFromHttp(MainActivity.this.js_fb);
+
+            try {
+                InputStream is = am.open("jquery-1.12.4.min.js");
+                jqCDN = readStream(is);
+            } catch (IOException e) {
+                Log.e("@background", e.getMessage(), e);
+            }
+
+            try {
+                InputStream is = am.open("jquery.touchSwipe.min.js");
+                jsTouchSwipeUrl = readStream(is);
+            } catch (IOException e) {
+                Log.e("@background", e.getMessage(), e);
+            }
+
+            if (js_begin.equals("")) {
+                try {
+                    InputStream is = am.open("hkmlApp_fb.js");
+                    js_begin = readStream(is);
+                } catch (IOException e) {
+                    Log.e("@backgropund", e.getMessage(), e);
+                }
+            }
+
+            return true;
+        }
+
+        protected void initWebview(String url) {
+
+            MainActivity.this.fbTabLoaded = true;
+
+            WebSettings webSettings = fbWebview.getSettings();
+            //CustomJavascriptInterface myJavaScriptInterface = new CustomJavascriptInterface(MainActivity.this);
+            //webview.addJavascriptInterface(myJavaScriptInterface, "AndroidFunction");
+            webSettings.setJavaScriptEnabled(true);
+            fbWebview.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    //syncCookies();
+
+                    // note: prevent "back" load history page will not invoke title event
+                    // js - added code to prevent double invoke of jQuery operations
+                    injectScript(view, jqCDN + "\n $j = jQuery.noConflict(); ");
+                    //injectScript(view, jsTouchSwipeUrl);
+                    injectScript(view, js_begin);
+                    // --
+
+                    // cater for if .goBack() is called and the setTitle event is not fired
+                    ma.setTitle(view.getTitle());
+                }
+
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                    Log.v("@fbwebview url:", url);
+
+                    if (! (url.startsWith("https://www.facebook.com/") || url.startsWith("https://m.facebook.com/") || url.startsWith("https://facebook.com/"))) {
+                        if (url.startsWith("http://www.hkml.net/")) {
+
+                            webview.loadUrl(url);
+
+                            tabhost.setCurrentTab(0);
+                        } else {
+                            // open with OS default browser
+                            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                            startActivity(browserIntent);
+                        }
+
+                        return true;
+                    }
+
+                    return super.shouldOverrideUrlLoading(view, url);
+                }
+
+            });
+
+            fbWebview.setWebChromeClient(new WebChromeClient() {
+
+                @Override
+                public void onReceivedTitle(WebView view, String title) {
+                    ma.setTitle(title);
+                }
+
+                @Override
+                public void onProgressChanged(WebView view, int newProgress) {
+                    //Log.v("HKMLApp", "@progress: " + Integer.toString(newProgress) + "\n");
+                    fbProgressBar.setProgress(newProgress);
+
+                    if (newProgress >= 50) {
+                        // let the "back" pages change to App layout faster
+                        injectScript(view, jqCDN + "\n $j = jQuery.noConflict(); ");
+                        //injectScript(view, jsTouchSwipeUrl);
+                        injectScript(view, js_begin);
+                    }
+                }
+
+                @SuppressWarnings("unused")
+                public void openFileChooser(ValueCallback<Uri> uploadMsg, String AcceptType, String capture) {
+                    mUploadMessage = uploadMsg;
+                    pickFile(AcceptType);
+                }
+
+                @SuppressWarnings("unused")
+                public void openFileChooser(ValueCallback<Uri> uploadMsg, String AcceptType) {
+                    mUploadMessage = uploadMsg;
+                    pickFile(AcceptType);
+                }
+
+                public void openFileChooser(ValueCallback<Uri> uploadMsg) {
+                    mUploadMessage = uploadMsg;
+                    pickFile("image/*");
+
+                }
+
+                @Override
+                public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> uploadMsg, FileChooserParams fileChooserParams) {
+                    mUploadMessageArray = uploadMsg;
+                    pickFile("image/*");
+                    return true;
+                }
+
+            });
+
+            fbWebview.loadUrl(fbStartUrl);
+
+        }
+
+        protected void onPostExecute(Boolean result) {
+            initWebview(MainActivity.this.fb_hkml_group);
         }
 
         private void injectScript(WebView view, String script) {
