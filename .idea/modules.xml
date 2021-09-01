@@ -3,8 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/HKMLApp-Android.iml" filepath="$PROJECT_DIR$/HKMLApp-Android.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/multipicker/multipicker.iml" filepath="$PROJECT_DIR$/multipicker/multipicker.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/HKMLApp-Android.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/HKMLApp-Android.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/multipicker/HKMLApp-Android.multipicker.iml" filepath="$PROJECT_DIR$/.idea/modules/multipicker/HKMLApp-Android.multipicker.iml" />
     </modules>
   </component>
 </project>

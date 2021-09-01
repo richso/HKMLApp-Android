@@ -7,31 +7,26 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Color;
-import android.media.MediaPlayer;
+import android.media.Image;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Parcel;
-import android.support.annotation.NonNull;
-import android.support.constraint.ConstraintLayout;
+
+import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
 // import android.support.design.widget.BottomNavigationView;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.appcompat.app.AppCompatActivity;
+
 import android.util.Base64;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebSettings;
 import android.webkit.WebChromeClient;
@@ -40,41 +35,36 @@ import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TabHost;
 import android.widget.TextView;
-import android.widget.VideoView;
 
-import com.facebook.drawee.backends.pipeline.Fresco;
-import com.facebook.drawee.generic.GenericDraweeHierarchyBuilder;
-import com.facebook.imagepipeline.core.ImagePipelineConfig;
-import com.facebook.imagepipeline.decoder.SimpleProgressiveJpegConfig;
-import com.facebook.imagepipeline.request.ImageRequestBuilder;
+//import com.facebook.drawee.backends.pipeline.Fresco;
+//import com.facebook.drawee.generic.GenericDraweeHierarchyBuilder;
+//import com.facebook.imagepipeline.core.ImagePipelineConfig;
+//import com.facebook.imagepipeline.decoder.SimpleProgressiveJpegConfig;
+//import com.facebook.imagepipeline.request.ImageRequestBuilder;
+import com.bumptech.glide.Glide;
 import com.kbeanie.multipicker.api.ImagePicker;
 import com.kbeanie.multipicker.api.Picker;
 import com.kbeanie.multipicker.api.callbacks.ImagePickerCallback;
 import com.kbeanie.multipicker.api.entity.ChosenImage;
-import com.stfalcon.frescoimageviewer.ImageViewer;
+//import com.squareup.picasso.Picasso;
+//import com.stfalcon.frescoimageviewer.ImageViewer;
+import com.stfalcon.imageviewer.StfalconImageViewer;
+import com.stfalcon.imageviewer.loader.ImageLoader;
+import android.widget.ImageView;
+
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringBufferInputStream;
 import java.net.CookieHandler;
-import java.net.CookieManager;
-import java.net.CookiePolicy;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -114,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         if(resultCode == RESULT_OK) {
             if(requestCode == Picker.PICK_IMAGE_DEVICE) {
                 if(imagePicker == null) {
@@ -200,13 +191,14 @@ public class MainActivity extends AppCompatActivity {
 
         requestExternalStoragePermission();
 
+        /*
         ImagePipelineConfig config = ImagePipelineConfig.newBuilder(this)
                 .setProgressiveJpegConfig(new SimpleProgressiveJpegConfig())
                 .setResizeAndRotateEnabledForNetwork(true)
                 .setDownsampleEnabled(true)
                 .build();
 
-        Fresco.initialize(this, config);
+        Fresco.initialize(this, config); */
 
         // see if any deep link need to be processed
         Intent intent = getIntent();
@@ -324,6 +316,14 @@ public class MainActivity extends AppCompatActivity {
         webview.restoreState(savedInstanceState);
     }
 
+    private void dummy() throws Exception {
+        String url = "123";
+
+        url.substring(1);
+
+
+
+    }
     private class WebTask extends AsyncTask<MainActivity, Integer, Boolean> {
 
         private String js_begin = "";
@@ -864,6 +864,7 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         syncCookies();
 
+                        /*
                         GenericDraweeHierarchyBuilder hierarchyBuilder = GenericDraweeHierarchyBuilder.newInstance(getResources())
                                 .setFailureImage(R.drawable.ic_broken_image_124dp)
                                 .setPlaceholderImage(R.drawable.ic_preimage_124dp);
@@ -871,6 +872,15 @@ public class MainActivity extends AppCompatActivity {
                         new ImageViewer.Builder(mContext, urls)
                                 .setCustomDraweeHierarchyBuilder(hierarchyBuilder)
                                 .setStartPosition(idx).show();
+                         */
+                        new StfalconImageViewer.Builder<String>(mContext, urls, new ImageLoader<String>(){
+                            public void loadImage(ImageView imageView, String image) {
+                                Glide.with(mContext).load(image)
+                                        .placeholder(R.drawable.ic_preimage_124dp)
+                                        .error(R.drawable.ic_broken_image_124dp)
+                                        .into(imageView);
+                            }
+                        }).withStartPosition(idx).show();
                     }
                 });
             }
